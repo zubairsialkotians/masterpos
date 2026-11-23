@@ -3,6 +3,7 @@ import { View, Text, Linking } from 'react-native';
 import { Screen, Card, KV, Button, ListItem, SectionTitle } from '../components/ui';
 import { useAuth } from '../components/AuthContext';
 import { MenuSyncCard } from '../components/MenuSync';
+import { PrinterCard } from '../components/PrintBill';
 import { confirmAction } from '../services/confirm';
 import { ROLE_LABELS } from '../services/format';
 import { colors } from '../theme';
@@ -42,6 +43,8 @@ export default function AccountScreen({ navigation }) {
         <>
           <SectionTitle>Menu on this device</SectionTitle>
           <MenuSyncCard />
+          <SectionTitle>Printer on this device</SectionTitle>
+          <PrinterCard />
         </>
       )}
 

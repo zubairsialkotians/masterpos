@@ -13,6 +13,7 @@ import { api } from '../services/api';
 import { money, qtyLabel } from '../services/format';
 import { nextQty, prevQty, minOf, round2, deliveryFee } from '../services/qty';
 import { confirmAction } from '../services/confirm';
+import { usePrintBill } from '../components/PrintBill';
 import { colors } from '../theme';
 
 /*
@@ -31,6 +32,7 @@ export default function PosOrderScreen({ navigation, route }) {
   const editing = route.params?.order || null;
   const { shop, isOwner, homeRoute } = useAuth();
   const cart = useCart();
+  const { print } = usePrintBill();
   // Editing: the order's items, with the same rules as the cart (the shop grid and order panel work on it on tablets)
   const edit = useLineStore();
   const lines = (editing ? edit.lines : cart.lines).map((l) => ({
@@ -129,6 +131,8 @@ export default function PosOrderScreen({ navigation, route }) {
         const r = await api.posPlace({ ...payload, fulfilment: f.fulfilment, name: f.name, phone: f.phone, address: f.address, note: f.note, branch_id: f.branch_id });
         Toast.show({ type: 'success', text1: r.message });
         cart.clear();
+        // Shop settings → Bill printing: print right away unless the shop prints only with the button
+        if (shop?.bill_print !== 'manual') print(r.order);
         // Shop → cart → here: land on the new order, with this login's home behind it
         navigation.reset({ index: 1, routes: [{ name: homeRoute }, { name: 'AdminOrderDetail', params: { id: r.order.id } }] });
       }

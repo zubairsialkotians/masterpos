@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './components/AuthContext';
 import { CartProvider } from './components/CartContext';
 import DismissKeyboard from './components/DismissKeyboard';
 import { VoiceOrderButton } from './components/VoiceOrder';
+import PrintHost from './components/PrintHost';
 import { isSplit, panelWidth } from './components/CartPanel';
 import { Button } from './components/ui';
 import { APP_NAME } from './config';
@@ -196,6 +197,7 @@ export default function App() {
               <NotificationListeners />
               <Routes />
               <VoiceOverlay route={route} />
+              <PrintHost />
             </NavigationContainer>
           </CartProvider>
           <Toast />

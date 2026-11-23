@@ -4,6 +4,7 @@ import { useLoad } from '../components/useData';
 import { useAuth } from '../components/AuthContext';
 import { api } from '../services/api';
 import { buildBill } from '../services/documents';
+import { PrintBillButton } from '../components/PrintBill';
 
 /*
   Bill for one order: preview, then share as PDF or image.
@@ -27,6 +28,7 @@ export default function BillScreen({ route }) {
       loading={loading}
       error={error}
       onRetry={reload}
+      extraFooter={isSeller && order ? <PrintBillButton order={order} style={{ marginBottom: 10 }} /> : null}
     />
   );
 }

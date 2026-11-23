@@ -6,6 +6,7 @@ import { OrderItems, OrderTotals, StatusBadge } from '../components/orders';
 import { PaymentCard } from '../components/payments';
 import { ReviewView } from '../components/reviews';
 import { useTeamActions } from '../components/team';
+import { PrintBillButton } from '../components/PrintBill';
 import { useLoad } from '../components/useData';
 import { useAuth } from '../components/AuthContext';
 import { api } from '../services/api';
@@ -118,6 +119,8 @@ export default function AdminOrderDetailScreen({ navigation, route }) {
           <Button small variant="ghost" icon="logo-whatsapp" title="WhatsApp" onPress={() => Linking.openURL(`https://wa.me/${waNumber(o.phone)}`)} style={{ flex: 1 }} />
           <Button small variant="ghost" icon="share-social-outline" title="Bill" onPress={() => navigation.navigate('Bill', { id: o.id })} style={{ flex: 1 }} />
         </View>
+        {/* Always here, whatever the order's status (Shop settings decide whether bills also print by themselves) */}
+        <PrintBillButton order={o} style={{ marginTop: 8 }} />
       </Card>
 
       {isOwner && o.status === 'pending' && branches.length > 1 && (

@@ -24,6 +24,7 @@ export default function SettingsScreen({ navigation }) {
         cod: data.cod !== false, pay_accounts: data.pay_accounts || [],
         delivery_fee: String(data.delivery_fee || ''), free_delivery_over: String(data.free_delivery_over || ''), min_order: String(data.min_order || ''),
         tax_type: data.tax_type || '', tax_value: data.tax_value ? String(data.tax_value) : '',
+        bill_print: data.bill_print === 'manual' ? 'manual' : 'auto',
         service_type: data.service_type || '', service_value: data.service_value ? String(data.service_value) : '',
       });
     }
@@ -54,7 +55,7 @@ export default function SettingsScreen({ navigation }) {
     try {
       const keys = ['phone', 'whatsapp', 'address', 'notice', 'delivery_fee', 'free_delivery_over', 'min_order', 'pickup', 'is_open', 'closed_message', 'order_prefix', 'bill_caption', 'logo_id',
         'about', 'email', 'hours', 'map_url', 'website', 'facebook', 'instagram', 'cod', 'pay_accounts',
-        'tax_type', 'tax_value', 'service_type', 'service_value'];
+        'tax_type', 'tax_value', 'service_type', 'service_value', 'bill_print'];
       const r = await api.saveSettings(Object.fromEntries(keys.map((k) => [k, typeof f[k] === 'boolean' ? (f[k] ? 1 : 0) : f[k]])));
       setShop(r.shop);
       Toast.show({ type: 'success', text1: r.message });
@@ -150,6 +151,14 @@ export default function SettingsScreen({ navigation }) {
       <SectionTitle>Orders & bills</SectionTitle>
       <Field label="Order number prefix" value={f.order_prefix} onChangeText={(v) => set('order_prefix')(v.toUpperCase())} autoCapitalize="characters" maxLength={8} placeholder="e.g. MM-" hint="Orders are numbered MM-00001, MM-00002…" />
       <Field label="Bill caption" value={f.bill_caption} onChangeText={set('bill_caption')} multiline maxLength={300} placeholder="Thank you for shopping with us!" />
+      <Text style={{ fontWeight: '800', color: colors.text, marginTop: 4, marginBottom: 8 }}>Print the bill</Text>
+      <Segmented value={f.bill_print} onChange={set('bill_print')}
+        options={[{ value: 'auto', label: 'When order is placed' }, { value: 'manual', label: 'Only with Print button' }]} />
+      <Text style={[s.itemMeta, { marginTop: 6, marginBottom: 10 }]}>
+        {f.bill_print === 'manual'
+          ? 'Staff print from the Print bill button on the order.'
+          : 'The bill prints as soon as staff place an order. The Print bill button is always on the order too.'} Each phone / tablet picks its printer in My account.
+      </Text>
     </Screen>
   );
 }
