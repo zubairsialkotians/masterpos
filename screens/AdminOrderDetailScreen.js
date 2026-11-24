@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, Linking } from 'react-native';
+import { View, Text, Modal, Linking, KeyboardAvoidingView } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Screen, Card, KV, Loading, ErrorBox, SectionTitle, Button, Footer, Field, SelectField, s } from '../components/ui';
 import { OrderItems, OrderTotals, StatusBadge } from '../components/orders';
@@ -186,7 +186,7 @@ export default function AdminOrderDetailScreen({ navigation, route }) {
 
       {team.picker}
       <Modal visible={cancelOpen} transparent animationType="fade" onRequestClose={() => setCancelOpen(false)}>
-        <View style={[s.modalBack, { justifyContent: 'center', padding: 24 }]}>
+        <KeyboardAvoidingView behavior="padding" style={[s.modalBack, { justifyContent: 'center', padding: 24 }]}>
           <View style={[s.card, { padding: 18 }]}>
             <Text style={[s.sheetTitle, { marginBottom: 8 }]}>Cancel order?</Text>
             {o.status !== 'pending' && <Text style={{ color: colors.muted, marginBottom: 10 }}>The items go back into stock.</Text>}
@@ -196,7 +196,7 @@ export default function AdminOrderDetailScreen({ navigation, route }) {
               <Button title="Cancel order" variant="danger" loading={busy === 'cancelled'} onPress={() => setStatus('cancelled', reason)} style={{ flex: 1 }} />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </Screen>
   );

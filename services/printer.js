@@ -1,8 +1,9 @@
 import { Linking, Platform } from 'react-native';
 import * as Print from 'expo-print';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { buildBill, docHtml } from './documents';
+import { buildBill, docHtml, DEVELOPER_LINE } from './documents';
 import { logoDataUri } from './share';
+import { qrSvg } from './qr';
 import { money, niceDate, qtyLabel } from './format';
 
 /*
@@ -186,8 +187,40 @@ export function receiptText(o, shop, w = 48) {
   L.push({ t: rule });
   m.notes.forEach((n) => wrap(n, w).forEach((y) => L.push({ t: y })));
   if (m.company.bill_caption) wrap(m.company.bill_caption, w).forEach((y) => L.push({ t: center(y, w) }));
+  if (m.qr) {
+    L.push({ qr: m.qr.url });
+    L.push({ t: center(m.qr.label, w), bold: true });
+  }
   L.push({ t: center('Thank you!', w) });
+  wrap(DEVELOPER_LINE, w).forEach((y) => L.push({ t: center(y, w) }));
   return L;
+}
+
+function utf8(str) {
+  const out = [];
+  for (const ch of str) {
+    let c = ch.codePointAt(0);
+    if (c < 0x80) out.push(c);
+    else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+    else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    else { out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63)); }
+  }
+  return out;
+}
+
+// ESC/POS QR code (model 2, size 6, error level M), centred
+function qrBytes(url) {
+  const data = utf8(String(url));
+  const len = data.length + 3;
+  return [
+    0x1b, 0x61, 1, // centre
+    0x1d, 0x28, 0x6b, 4, 0, 0x31, 0x41, 0x32, 0, // model 2
+    0x1d, 0x28, 0x6b, 3, 0, 0x31, 0x43, 6, // module size
+    0x1d, 0x28, 0x6b, 3, 0, 0x31, 0x45, 0x31, // error level M
+    0x1d, 0x28, 0x6b, len & 0xff, (len >> 8) & 0xff, 0x31, 0x50, 0x30, ...data, // store
+    0x1d, 0x28, 0x6b, 3, 0, 0x31, 0x51, 0x30, // print
+    0x0a, 0x1b, 0x61, 0, // back to left
+  ];
 }
 
 // ESC/POS bytes: init, lines (bold / double size), feed and cut
@@ -203,6 +236,7 @@ function escpos(lines, copies = 1) {
   for (let n = 0; n < copies; n += 1) {
     push(0x1b, 0x40); // init
     lines.forEach((l) => {
+      if (l.qr) { qrBytes(l.qr).forEach((b) => push(b)); return; }
       if (l.big) push(0x1d, 0x21, 0x11); // double width + height
       if (l.bold) push(0x1b, 0x45, 1);
       text(l.big ? l.t.trim() : l.t);
@@ -234,7 +268,9 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 
 export function receiptHtml(o, shop, paper = 80, given = null) {
   const lines = given || receiptText(o, shop, paper === 58 ? 32 : 48);
-  const body = lines.map((l) => `<div class="${l.big ? 'big' : ''} ${l.bold ? 'b' : ''}">${esc(l.big ? l.t.trim() : l.t) || '&nbsp;'}</div>`).join('');
+  const body = lines.map((l) => (l.qr
+    ? `<div class="qr">${qrSvg(l.qr, paper === 58 ? 110 : 130)}</div>`
+    : `<div class="${l.big ? 'big' : ''} ${l.bold ? 'b' : ''}">${esc(l.big ? l.t.trim() : l.t) || '&nbsp;'}</div>`)).join('');
   return `<!doctype html><html><head><meta charset="utf-8">
 <style>
   @page { margin: 0; }
@@ -243,6 +279,7 @@ export function receiptHtml(o, shop, paper = 80, given = null) {
   body { margin: 0; font-family: 'Courier New', monospace; font-size: ${paper === 58 ? 9 : 10.5}pt; color: #000; }
   div { white-space: pre; line-height: 1.25; }
   .b { font-weight: bold; }
+  .qr { white-space: normal; text-align: center; margin: 6px 0 2px; } .qr svg { display: inline-block; }
   .big { font-size: 1.6em; font-weight: bold; text-align: center; white-space: normal; margin-bottom: 2px; }
 </style></head><body>${body}</body></html>`;
 }

@@ -58,6 +58,7 @@ import TeamOrderDetailScreen from './screens/TeamOrderDetailScreen';
 import TeamScreen from './screens/TeamScreen';
 import TeamFormScreen from './screens/TeamFormScreen';
 import PosOrderScreen from './screens/PosOrderScreen';
+import PlanScreen from './screens/PlanScreen';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -113,7 +114,7 @@ const ROUTES = {
     Expenses: ExpensesScreen, ExpenseForm: ExpenseFormScreen, Reports: ReportsScreen,
   },
   // Taking orders in the app: owner, branch admin, cashier (the cashier's home is their orders list)
-  seller: { AdminOrders: AdminOrdersScreen, AdminOrderDetail: AdminOrderDetailScreen, PosOrder: PosOrderScreen },
+  seller: { AdminOrders: AdminOrdersScreen, AdminOrderDetail: AdminOrderDetailScreen, PosOrder: PosOrderScreen, Plan: PlanScreen },
   // Kitchen / rider panel (the shop admin can open the kitchen board too)
   team: { TeamHome: TeamHomeScreen, TeamOrderDetail: TeamOrderDetailScreen },
   owner: { Team: TeamScreen, TeamForm: TeamFormScreen, Branches: BranchesScreen, BranchForm: BranchFormScreen, Settings: SettingsScreen, AdminNews: AdminNewsScreen, NewsForm: NewsFormScreen, AdminBanners: AdminBannersScreen, BannerForm: BannerFormScreen },

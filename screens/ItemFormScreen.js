@@ -96,7 +96,9 @@ export default function ItemFormScreen({ navigation, route }) {
       Toast.show({ type: 'success', text1: r.message });
       navigation.goBack();
     } catch (e) {
-      Toast.show({ type: 'error', text1: 'Could not save', text2: e.message, visibilityTime: 6000 });
+      const limit = e.data?.plan_limit;
+      Toast.show({ type: 'error', text1: limit ? 'Item limit reached' : 'Could not save', text2: e.message, visibilityTime: limit ? 10000 : 6000,
+        onPress: limit ? () => { Toast.hide(); navigation.navigate('Plan'); } : undefined });
     } finally {
       setBusy(false);
     }

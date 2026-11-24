@@ -25,6 +25,7 @@ export default function SettingsScreen({ navigation }) {
         delivery_fee: String(data.delivery_fee || ''), free_delivery_over: String(data.free_delivery_over || ''), min_order: String(data.min_order || ''),
         tax_type: data.tax_type || '', tax_value: data.tax_value ? String(data.tax_value) : '',
         bill_print: data.bill_print === 'manual' ? 'manual' : 'auto',
+        qr_url: data.qr_url || '', qr_label: data.qr_label || '',
         service_type: data.service_type || '', service_value: data.service_value ? String(data.service_value) : '',
       });
     }
@@ -55,7 +56,7 @@ export default function SettingsScreen({ navigation }) {
     try {
       const keys = ['phone', 'whatsapp', 'address', 'notice', 'delivery_fee', 'free_delivery_over', 'min_order', 'pickup', 'is_open', 'closed_message', 'order_prefix', 'bill_caption', 'logo_id',
         'about', 'email', 'hours', 'map_url', 'website', 'facebook', 'instagram', 'cod', 'pay_accounts',
-        'tax_type', 'tax_value', 'service_type', 'service_value', 'bill_print'];
+        'tax_type', 'tax_value', 'service_type', 'service_value', 'bill_print', 'qr_url', 'qr_label'];
       const r = await api.saveSettings(Object.fromEntries(keys.map((k) => [k, typeof f[k] === 'boolean' ? (f[k] ? 1 : 0) : f[k]])));
       setShop(r.shop);
       Toast.show({ type: 'success', text1: r.message });
@@ -151,6 +152,12 @@ export default function SettingsScreen({ navigation }) {
       <SectionTitle>Orders & bills</SectionTitle>
       <Field label="Order number prefix" value={f.order_prefix} onChangeText={(v) => set('order_prefix')(v.toUpperCase())} autoCapitalize="characters" maxLength={8} placeholder="e.g. MM-" hint="Orders are numbered MM-00001, MM-00002…" />
       <Field label="Bill caption" value={f.bill_caption} onChangeText={set('bill_caption')} multiline maxLength={300} placeholder="Thank you for shopping with us!" />
+      <Field label="QR code link (optional)" value={f.qr_url} onChangeText={set('qr_url')} autoCapitalize="none" autoCorrect={false} keyboardType="url"
+        placeholder="https://instagram.com/yourshop" testID="qr-url"
+        hint="A QR code for this link is printed on every bill. Customers scan it to open the link: your menu, Google reviews, Instagram, WhatsApp, payment page…" />
+      {!!f.qr_url.trim() && (
+        <Field label="Text under the QR code" value={f.qr_label} onChangeText={set('qr_label')} maxLength={60} placeholder="Scan me" testID="qr-label" />
+      )}
       <Text style={{ fontWeight: '800', color: colors.text, marginTop: 4, marginBottom: 8 }}>Print the bill</Text>
       <Segmented value={f.bill_print} onChange={set('bill_print')}
         options={[{ value: 'auto', label: 'When order is placed' }, { value: 'manual', label: 'Only with Print button' }]} />

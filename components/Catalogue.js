@@ -14,7 +14,8 @@ import { colors } from '../theme';
   header({ showCategory }): extra content above the search (banners, notices)
   onProductPress(p): tap on a card; onSizes(p): "Choose size" on items with sizes
 */
-export function Catalogue({ width, header, onProductPress, onSizes, onRefresh, bottomPadding = 30, maxWidth = 1000 }) {
+// catStyle: the app's own category look { wrap, img, text, active, activeText } (optional)
+export function Catalogue({ width, header, onProductPress, onSizes, onRefresh, bottomPadding = 30, maxWidth = 1000, catStyle = {} }) {
   const [category, setCategory] = useState(0);
   const [search, setSearch] = useState('');
   const [q, setQ] = useState('');
@@ -50,12 +51,12 @@ export function Catalogue({ width, header, onProductPress, onSizes, onRefresh, b
             const active = category === c.id;
             return (
               <TouchableOpacity style={st.cat} onPress={() => setCategory(c.id)} testID={`cat-${c.id}`}>
-                <View style={[st.catImgWrap, active && { borderColor: colors.primary }]}>
+                <View style={[st.catImgWrap, catStyle.wrap, active && { borderColor: catStyle.active || colors.primary }]}>
                   {c.id === 0
-                    ? <View style={[st.catImg, { backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }]}><Ionicons name="grid" size={24} color={colors.primary} /></View>
-                    : <ProductImage uri={c.image} style={st.catImg} iconSize={22} />}
+                    ? <View style={[st.catImg, catStyle.img, { backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }]}><Ionicons name="grid" size={24} color={colors.primary} /></View>
+                    : <ProductImage uri={c.image} style={[st.catImg, catStyle.img]} iconSize={22} />}
                 </View>
-                <Text style={[st.catText, active && { color: colors.primary }]} numberOfLines={1}>{c.name}</Text>
+                <Text style={[st.catText, catStyle.text, active && { color: catStyle.active || colors.primary }, active && catStyle.activeText]} numberOfLines={1}>{c.name}</Text>
               </TouchableOpacity>
             );
           }}

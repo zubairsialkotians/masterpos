@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, ScrollView,
-  Modal, FlatList, RefreshControl, KeyboardAvoidingView, Platform,
+  Modal, FlatList, RefreshControl, KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,7 +43,8 @@ export function Screen({
         </View>
         {right}
       </View>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Android draws edge to edge (the window no longer shrinks for the keyboard): lift the content on both platforms */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         {body}
         {footer}
       </KeyboardAvoidingView>
@@ -311,7 +312,7 @@ export function SelectField({
       {!!error && <Text style={s.error}>{error}</Text>}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View style={s.modalBack}>
+        <KeyboardAvoidingView behavior="padding" style={s.modalBack}>
           <View style={[s.sheet, { paddingBottom: 12 + insets.bottom }]}>
             <View style={s.sheetHead}>
               <Text style={s.sheetTitle}>{label || placeholder}</Text>
@@ -348,7 +349,7 @@ export function SelectField({
               ListEmptyComponent={canCreate ? null : <Empty text="No matches" />}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -416,7 +417,7 @@ export function DateRangeBar({ value, onChange, presets = RANGE_PRESETS }) {
         <Chip icon="calendar-outline" label={value.key === 'custom' ? rangeLabel(value) : 'Custom'} active={value.key === 'custom'} onPress={() => setOpen(true)} />
       </ChipRow>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <View style={[s.modalBack, { justifyContent: 'center', padding: 24 }]}>
+        <KeyboardAvoidingView behavior="padding" style={[s.modalBack, { justifyContent: 'center', padding: 24 }]}>
           <View style={[s.card, { padding: 18 }]}>
             <Text style={[s.sheetTitle, { marginBottom: 12 }]}>Custom dates</Text>
             <Field label="From (YYYY-MM-DD)" value={from} onChangeText={setFrom} placeholder="2026-11-01" autoCapitalize="none" keyboardType="numbers-and-punctuation" />
@@ -427,7 +428,7 @@ export function DateRangeBar({ value, onChange, presets = RANGE_PRESETS }) {
               <Button title="Apply" disabled={!valid} onPress={() => { onChange(rangeFor('custom', { from, to })); setOpen(false); }} style={{ flex: 1 }} />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen, HeaderButton, Stat, StatGrid, SectionTitle, DateRangeBar, BranchFilter, Loading, ErrorBox } from '../components/ui';
 import { useAuth } from '../components/AuthContext';
 import { useLoad } from '../components/useData';
+import { PlanCard, usePlan } from '../components/Plan';
 import { api } from '../services/api';
 import { money, rangeFor, rangeLabel, ROLE_LABELS } from '../services/format';
 import { colors } from '../theme';
@@ -44,6 +45,7 @@ export default function AdminHomeScreen({ navigation }) {
     return () => clearInterval(t);
   }, [range.from, range.to, branchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const plan = usePlan();
   const go = (screen, params) => navigation.navigate(screen, params);
   const tiles = TILES.filter((t) => !t.owner || isOwner);
 
@@ -53,9 +55,10 @@ export default function AdminHomeScreen({ navigation }) {
       subtitle={`${user.name} · ${ROLE_LABELS[user.role]}${user.branch ? ` · ${user.branch.name}` : ''}`}
       back={false}
       right={<HeaderButton icon="person-circle-outline" onPress={() => go('Account')} />}
-      onRefresh={refresh}
+      onRefresh={() => { refresh(); plan.silentReload(); }}
       refreshing={refreshing}
     >
+      <PlanCard plan={plan.data} compact onPress={() => go('Plan')} />
       {data?.pending_all > 0 && (
         <TouchableOpacity style={st.alert} onPress={() => go('AdminOrders', { status: 'pending' })} testID="pending-alert">
           <Ionicons name="notifications" size={20} color={colors.warning} />

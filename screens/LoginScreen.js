@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, ScrollView, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, Image, ScrollView, KeyboardAvoidingView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -47,7 +47,7 @@ export default function LoginScreen({ navigation }) {
 
   const ok = /^\S+@\S+\.\S+$/.test(email.trim()) && password;
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior="padding">
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 + insets.bottom }} keyboardShouldPersistTaps="handled">
         <View style={[st.hero, { paddingTop: 36 + insets.top }]}>
           <View style={st.ring}><Image source={require('../assets/adaptive-icon.png')} style={st.logo} /></View>

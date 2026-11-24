@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Modal, FlatList, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, Modal, FlatList, TouchableOpacity, ActivityIndicator, useWindowDimensions, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -137,7 +137,10 @@ export default function PosOrderScreen({ navigation, route }) {
         navigation.reset({ index: 1, routes: [{ name: homeRoute }, { name: 'AdminOrderDetail', params: { id: r.order.id } }] });
       }
     } catch (e) {
-      Toast.show({ type: 'error', text1: editing ? 'Could not update the order' : 'Could not place the order', text2: e.message, visibilityTime: 7000 });
+      // Plan limit reached: tap the message to see the plan and upgrade
+      const limit = e.data?.plan_limit;
+      Toast.show({ type: 'error', text1: limit ? 'Monthly order limit reached' : editing ? 'Could not update the order' : 'Could not place the order', text2: e.message, visibilityTime: limit ? 10000 : 7000,
+        onPress: limit ? () => { Toast.hide(); navigation.navigate('Plan'); } : undefined });
     } finally {
       setSaving(false);
     }
@@ -330,7 +333,7 @@ function ProductPicker({ visible, onClose, onAdd, lines }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={s.modalBack}>
+      <KeyboardAvoidingView behavior="padding" style={s.modalBack}>
         <View style={[s.sheet, { height: '90%', paddingBottom: 12 + insets.bottom }]}>
           <View style={s.sheetHead}>
             <Text style={s.sheetTitle}>Add items</Text>
@@ -371,7 +374,7 @@ function ProductPicker({ visible, onClose, onAdd, lines }) {
             />
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

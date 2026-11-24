@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, FlatList, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -22,7 +22,7 @@ export function RiderPicker({ order, onClose, onPick }) {
 
   return (
     <Modal visible={!!order} animationType="slide" transparent onRequestClose={onClose} onShow={load}>
-      <View style={s.modalBack}>
+      <KeyboardAvoidingView behavior="padding" style={s.modalBack}>
         <View style={[s.sheet, { paddingBottom: 12 + insets.bottom }]}>
           <View style={s.sheetHead}>
             <Text style={s.sheetTitle}>Give {order?.order_no} to a rider</Text>
@@ -48,7 +48,7 @@ export function RiderPicker({ order, onClose, onPick }) {
             />
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

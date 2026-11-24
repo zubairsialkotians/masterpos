@@ -107,6 +107,8 @@ export const api = {
   cancelMyOrder: (id, reason) => post('/my/orders/cancel', { id, reason }),
 
   // Staff
+  // The shop's plan and this month's use
+  plan: () => get('/plan'),
   dashboard: (p) => get('/admin/dashboard', p),
   adminOrders: (p) => get('/admin/orders', p),
   adminOrder: (id) => get('/admin/orders/view', { id }),

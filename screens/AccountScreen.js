@@ -36,6 +36,7 @@ export default function AccountScreen({ navigation }) {
       ) : isTeam ? (
         <ListItem icon={isRider ? 'bicycle-outline' : 'restaurant-outline'} title={isRider ? 'My deliveries' : 'Kitchen orders'} onPress={() => navigation.navigate('TeamHome')} />
       ) : null}
+      {isSeller && <ListItem icon="ribbon-outline" title="Plan" subtitle="Orders and items this month, upgrade" onPress={() => navigation.navigate('Plan')} />}
       <ListItem icon="key-outline" title="Change password" onPress={() => navigation.navigate('Password')} />
 
       {/* Owner / branch admin / cashier take orders from the menu: keep a copy on this device if they want */}

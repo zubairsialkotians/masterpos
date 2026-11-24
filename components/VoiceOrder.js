@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, ActivityIndicator, StyleSheet, Animated, Easing, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -206,7 +206,7 @@ function VoiceSheet({ visible, onClose, onOrder }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={s.modalBack}>
+      <KeyboardAvoidingView behavior="padding" style={s.modalBack}>
         <View style={[s.sheet, { maxHeight: '88%', paddingBottom: 12 + insets.bottom }]}>
           <View style={s.sheetHead}>
             <Text style={s.sheetTitle}>Voice order</Text>
@@ -273,7 +273,7 @@ function VoiceSheet({ visible, onClose, onOrder }) {
             <Text style={st.checkoutText}>{cart.lines.length ? `Review order · ${cart.lines.length} item${cart.lines.length > 1 ? 's' : ''}` : 'Cart is empty'}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
