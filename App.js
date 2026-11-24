@@ -59,6 +59,8 @@ import TeamScreen from './screens/TeamScreen';
 import TeamFormScreen from './screens/TeamFormScreen';
 import PosOrderScreen from './screens/PosOrderScreen';
 import PlanScreen from './screens/PlanScreen';
+import PurchasesScreen from './screens/PurchasesScreen';
+import PurchaseFormScreen from './screens/PurchaseFormScreen';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -112,6 +114,7 @@ const ROUTES = {
     ReturnForm: ReturnFormScreen, Returns: ReturnsScreen, Reviews: ReviewsScreen, Items: ItemsScreen, ItemForm: ItemFormScreen,
     Categories: CategoriesScreen, Stock: StockScreen, StockMoves: StockMovesScreen, Customers: CustomersScreen,
     Expenses: ExpensesScreen, ExpenseForm: ExpenseFormScreen, Reports: ReportsScreen,
+    Purchases: PurchasesScreen, PurchaseForm: PurchaseFormScreen,
   },
   // Taking orders in the app: owner, branch admin, cashier (the cashier's home is their orders list)
   seller: { AdminOrders: AdminOrdersScreen, AdminOrderDetail: AdminOrderDetailScreen, PosOrder: PosOrderScreen, Plan: PlanScreen },
