@@ -43,6 +43,8 @@ module.exports = {
         microphonePermission: 'Speak orders to add items to the cart.',
         speechRecognitionPermission: 'Turn your spoken orders into cart items.',
       }],
+      // Location while the app is open only: customer's spot sent with the order, shop location in settings
+      ['expo-location', { locationWhenInUsePermission: "Set your shop's location so the app can tell customers how far away they are.", isAndroidBackgroundLocationEnabled: false, isIosBackgroundLocationEnabled: false }],
       // Embedded icon font so icons never depend on runtime font loading
       ['expo-font', { fonts: ['./assets/fonts/ionicons.ttf'] }],
       './plugins/withNoForceDark',
