@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Linking } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Screen, Card, KV, Button, ListItem, SectionTitle } from '../components/ui';
 import { useAuth } from '../components/AuthContext';
 import { MenuSyncCard } from '../components/MenuSync';
@@ -11,7 +12,13 @@ import { PRIVACY_URL, APP_NAME } from '../config';
 
 // MasterPOS: the logged-in staff member, their shop, and log out (to log in to another shop)
 export default function AccountScreen({ navigation }) {
-  const { user, shop, isStaff, isTeam, isRider, isCashier, isSeller, logout } = useAuth();
+  const { user, shop, isStaff, isTeam, isRider, isCashier, isSeller, logout, deleteAccount } = useAuth();
+
+  // Google Play: the user can delete their account from inside the app
+  const removeAccount = async () => {
+    if (!(await confirmAction('Delete your account?', 'Your login is removed and you are logged out on every device. Shop records such as past orders and sales stay with the shop. This cannot be undone.', 'Delete account', true))) return;
+    try { await deleteAccount(); } catch (e) { Toast.show({ type: 'error', text1: 'Could not delete the account', text2: e.message }); }
+  };
 
   const signOut = async () => {
     // The app goes back to the login by itself
@@ -66,6 +73,7 @@ export default function AccountScreen({ navigation }) {
       )}
 
       <Button title="Log out" variant="danger" icon="log-out-outline" onPress={signOut} style={{ marginTop: 24 }} />
+      <Button title="Delete my account" variant="outline" icon="trash-outline" onPress={removeAccount} style={{ marginTop: 12 }} />
     </Screen>
   );
 }
