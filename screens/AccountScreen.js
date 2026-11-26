@@ -5,6 +5,8 @@ import { Screen, Card, KV, Button, ListItem, SectionTitle } from '../components/
 import { useAuth } from '../components/AuthContext';
 import { MenuSyncCard } from '../components/MenuSync';
 import { PrinterCard } from '../components/PrintBill';
+import { OfflineOrdersCard } from '../components/OfflineOrders';
+import { offlineStatus } from '../services/offlineOrders';
 import { confirmAction } from '../services/confirm';
 import { ROLE_LABELS } from '../services/format';
 import { colors } from '../theme';
@@ -22,7 +24,10 @@ export default function AccountScreen({ navigation }) {
 
   const signOut = async () => {
     // The app goes back to the login by itself
-    if (await confirmAction('Log out?', `You can then log in to ${APP_NAME} with any shop's staff login.`, 'Log out', true)) await logout();
+    // Orders taken offline stay on this device and are sent when this shop's staff log in here again
+    const left = offlineStatus().orders.length;
+    const warn = left ? ` ${left} order${left > 1 ? 's' : ''} taken offline ${left > 1 ? 'are' : 'is'} not sent yet: ${left > 1 ? 'they stay' : 'it stays'} on this device and ${left > 1 ? 'are' : 'is'} sent when someone from ${shop?.name || 'this shop'} logs in here again.` : '';
+    if (await confirmAction('Log out?', `You can then log in to ${APP_NAME} with any shop's staff login.${warn}`, 'Log out', true)) await logout();
   };
   const call = () => Linking.openURL(`tel:${shop.phone}`);
   const openPrivacy = () => Linking.openURL(PRIVACY_URL);
@@ -49,6 +54,8 @@ export default function AccountScreen({ navigation }) {
       {/* Owner / branch admin / cashier take orders from the menu: keep a copy on this device if they want */}
       {isSeller && (
         <>
+          <SectionTitle>Offline orders</SectionTitle>
+          <OfflineOrdersCard />
           <SectionTitle>Menu on this device</SectionTitle>
           <MenuSyncCard />
           <SectionTitle>Printer on this device</SectionTitle>

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, useWindowDimensions, StyleSheet } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,8 @@ import { Catalogue } from '../components/Catalogue';
 import { MenuStrip, runSync } from '../components/MenuSync';
 import BannerSlider from '../components/BannerSlider';
 import { CartPanel, SizePicker, isSplit, panelWidth } from '../components/CartPanel';
+import { PanelCheckout } from '../components/PosCheckout';
+import { OfflineStrip } from '../components/OfflineOrders';
 import { useLoad } from '../components/useData';
 import { useAuth } from '../components/AuthContext';
 import { useCart } from '../components/CartContext';
@@ -32,9 +34,13 @@ export default function HomeScreen({ navigation }) {
   // Tablet + taking orders: the order shows on the right while items are added on the left
   const split = isSplit(width, isSeller);
   const sideW = split ? panelWidth(width) : 0;
+  // Tablet: "Checkout here" shows the checkout in the panel in place of the items; placing the order brings the items back, empty
+  const [checkingOut, setCheckingOut] = useState(false);
+  useEffect(() => { if (!cart.count || !split) setCheckingOut(false); }, [cart.count, split]);
 
   const header = ({ showCategory, contentWidth }) => (
     <View>
+      {isSeller && <OfflineStrip onOpen={() => navigation.navigate('Account')} />}
       {isSeller && <MenuStrip onSetup={runSync} />}
       {isSeller && !split && (
         <TouchableOpacity style={[st.banner, { backgroundColor: colors.primarySoft }]} onPress={() => navigation.navigate('Cart')} testID="pos-banner">
@@ -93,7 +99,9 @@ export default function HomeScreen({ navigation }) {
           onProductPress={(item) => navigation.navigate('Product', { id: item.id, product: item })}
           onRefresh={() => { banners.reload(); reloadShop(); }}
         />
-      {split && <CartPanel width={sideW} onCheckout={() => navigation.navigate('PosOrder')} />}
+      {split && (checkingOut
+        ? <PanelCheckout width={sideW} onBack={() => setCheckingOut(false)} />
+        : <CartPanel width={sideW} onCheckout={() => navigation.navigate('PosOrder')} onCheckoutHere={() => setCheckingOut(true)} />)}
       </View>
       {split && <SizePicker product={sizesOf} onClose={() => setSizesOf(null)} />}
 

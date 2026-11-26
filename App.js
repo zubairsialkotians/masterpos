@@ -12,6 +12,7 @@ import { CartProvider } from './components/CartContext';
 import DismissKeyboard from './components/DismissKeyboard';
 import { VoiceOrderButton } from './components/VoiceOrder';
 import PrintHost from './components/PrintHost';
+import { OfflineSync } from './components/OfflineOrders';
 import { isSplit, panelWidth } from './components/CartPanel';
 import { Button } from './components/ui';
 import { APP_NAME } from './config';
@@ -202,6 +203,7 @@ export default function App() {
               <Routes />
               <VoiceOverlay route={route} />
               <PrintHost />
+              <OfflineSync />
             </NavigationContainer>
           </CartProvider>
           <Toast />

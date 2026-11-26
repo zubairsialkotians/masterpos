@@ -19,7 +19,8 @@ export const panelWidth = (width) => (width >= 1100 ? 400 : width >= 900 ? 360 :
 export const isSplit = (width, isSeller) => !!isSeller && width >= SPLIT_MIN_WIDTH;
 
 // title / checkoutTitle / note: changing a placed order uses its own words; clearable: show "Clear"
-export function CartPanel({ width, onCheckout, title = 'Current order', checkoutTitle = 'Customer & charges', checkoutIcon = 'arrow-forward',
+// onCheckoutHere: also offer "Checkout here", which finishes the order in this panel (the shop screen)
+export function CartPanel({ width, onCheckout, onCheckoutHere, title = 'Current order', checkoutTitle = 'Customer & charges', checkoutIcon = 'arrow-forward',
   note = 'Customer, discount, tax and service charge on the next step.', clearable = true, bottomInset = true }) {
   const cart = useCart();
   const insets = useSafeAreaInsets();
@@ -88,7 +89,11 @@ export function CartPanel({ width, onCheckout, title = 'Current order', checkout
           <Text style={st.total}>{money(cart.subtotal)}</Text>
         </View>
         {!!note && <Text style={[s.itemMeta, { marginBottom: 10 }]}>{note}</Text>}
-        <Button testID="panel-checkout" title={checkoutTitle} icon={checkoutIcon} onPress={onCheckout} disabled={!cart.count} />
+        {onCheckoutHere && (
+          <Button testID="panel-checkout-here" title="Checkout here" icon="card-outline" onPress={onCheckoutHere} disabled={!cart.count} style={{ marginBottom: 8 }} />
+        )}
+        <Button testID="panel-checkout" title={checkoutTitle} icon={checkoutIcon} onPress={onCheckout} disabled={!cart.count}
+          variant={onCheckoutHere ? 'outline' : 'primary'} />
       </View>
     </View>
   );
