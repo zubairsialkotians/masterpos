@@ -2,7 +2,9 @@
 // brand = fills (buttons, chips, cart bar); primary = text/icons/borders on white.
 // For a light brand (e.g. yellow) text on fills turns dark and primary uses EXPO_PUBLIC_ACCENT_COLOR or a darker shade.
 const isHex = (v) => /^#[0-9a-fA-F]{6}$/.test(v || '');
-const brand = isHex(process.env.EXPO_PUBLIC_PRIMARY_COLOR) ? process.env.EXPO_PUBLIC_PRIMARY_COLOR : '#7fd38b';
+// MasterPOS Desktop (built with EXPO_PUBLIC_DESKTOP=1): the desktop POS look, deep green on black
+export const DESKTOP = process.env.EXPO_PUBLIC_DESKTOP === '1';
+const brand = isHex(process.env.EXPO_PUBLIC_PRIMARY_COLOR) ? process.env.EXPO_PUBLIC_PRIMARY_COLOR : DESKTOP ? '#0e7a54' : '#7fd38b';
 
 function luminance(hex) {
   const n = parseInt(hex.slice(1), 16);
@@ -29,10 +31,18 @@ const primary = isHex(process.env.EXPO_PUBLIC_ACCENT_COLOR)
   ? process.env.EXPO_PUBLIC_ACCENT_COLOR
   : lightBrand ? shade(brand, 0.5) : brand;
 
+// Desktop: neutral greys and near-black instead of the mint tints
+const desk = DESKTOP ? {
+  primarySoft: '#e6f3ee', black: '#0b0f0e', background: '#f2f5f4', border: '#e1e7e4',
+  text: '#121815', muted: '#647069', faint: '#8a9891', shadow: '#0b0f0e',
+} : {};
+
 // MasterPOS: light green fills with deep green ink on a mint-white background
 export const colors = {
   brand,
   onBrand: lightBrand ? '#0c3a20' : '#ffffff',
+  // Icons / text on the black buttons (− / + steppers, cart bar): the brand when it is light, else white
+  onBlack: lightBrand ? brand : '#ffffff',
   primary,
   primaryDark: shade(primary, 0.35),
   primarySoft: tint(brand, lightBrand ? 0.7 : 0.88),
@@ -51,6 +61,7 @@ export const colors = {
   warning: '#b45309',
   warningSoft: '#fdf1e2',
   sale: '#e11d48',
+  ...desk,
 };
 
 export const statusColors = {

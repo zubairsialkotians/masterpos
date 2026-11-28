@@ -36,3 +36,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Web / desktop builds
+dist-web/
+dist-desktop/

@@ -1,13 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useIsFocused } from '@react-navigation/native';
+import { useChordKeys, pendingKeys } from '../components/keys';
 import { View, Text, Modal, FlatList, TouchableOpacity, ActivityIndicator, useWindowDimensions, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { Screen, Card, Button, Footer, SectionTitle, SearchBar, Chip, Empty, s } from '../components/ui';
 import { usePosForm, CheckoutFields, orderErrorToast, placeStaffOrder } from '../components/PosCheckout';
-import { ProductImage } from '../components/shop';
+import { ProductImage, DiscountNote } from '../components/shop';
 import { useAuth } from '../components/AuthContext';
-import { useCart, useLineStore, LinesScope, lineName } from '../components/CartContext';
+import { useCart, useLineStore, LinesScope, lineName, customLine, catalogueIds, lineDiscount } from '../components/CartContext';
+import { CustomItemButton } from '../components/CustomItem';
 import { Catalogue } from '../components/Catalogue';
 import { CartPanel, SizePicker, SPLIT_MIN_WIDTH, panelWidth } from '../components/CartPanel';
 import { api } from '../services/api';
@@ -35,7 +38,8 @@ export default function PosOrderScreen({ navigation, route }) {
   // Editing: the order's items, with the same rules as the cart (the shop grid and order panel work on it on tablets)
   const edit = useLineStore();
   const lines = (editing ? edit.lines : cart.lines).map((l) => ({
-    key: lineKey(l.item_id, l.size), item_id: l.item_id, size: l.size || '', name: lineName(l), unit: l.unit, price: l.price, qty: l.qty, rules: l,
+    key: lineKey(l.item_id, l.size), item_id: l.item_id, custom: !!l.custom, size: l.size || '', name: lineName(l), unit: l.unit, price: l.price, qty: l.qty, rules: l,
+    was: l.was, disc_label: l.disc_label,
   }));
   const [picker, setPicker] = useState(false);
   const { width } = useWindowDimensions();
@@ -47,12 +51,15 @@ export default function PosOrderScreen({ navigation, route }) {
   // Editing: start from the order's lines, then take the catalogue's rules (steps, minimums) for − / +
   useEffect(() => {
     if (!editing) return;
-    edit.setLines(editing.items.map((it) => ({
-      item_id: it.item_id, size: it.size || '', name: it.name, unit: it.unit, price: it.price, image: it.image || '', qty: it.qty,
-      min_qty: 1, qty_step: 1, max_qty: null, qty_options: [],
-    })));
-    const ids = [...new Set(editing.items.map((it) => it.item_id))].join(',');
-    api.products({ ids, per_page: 60 }).then((r) => edit.applyRules(r.products || [])).catch(() => {});
+    edit.setLines(editing.items.map((it) => (!Number(it.item_id)
+      // A custom item on the order (no catalogue item)
+      ? customLine({ name: it.name, price: it.price, qty: it.qty })
+      : {
+        item_id: it.item_id, size: it.size || '', name: it.name, unit: it.unit, price: it.price, image: it.image || '', qty: it.qty, was: it.list_price,
+        min_qty: 1, qty_step: 1, max_qty: null, qty_options: [],
+      })));
+    const ids = catalogueIds(editing.items.filter((it) => Number(it.item_id)));
+    if (ids) api.products({ ids, per_page: 60 }).then((r) => edit.applyRules(r.products || [])).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Phone picker: tap adds the item's first amount, or one more step when it's already there
@@ -75,6 +82,21 @@ export default function PosOrderScreen({ navigation, route }) {
   };
 
   const { total, moneyError, needsContact } = form;
+
+  // Keyboard (desktop): Ctrl+A A cash received, Ctrl+S S place / save
+  const cashRef = useRef(null);
+  const screenFocused = useIsFocused();
+  const placeKey = () => {
+    if (saving || !lines.length) return;
+    if (needsContact) { Toast.show({ type: 'error', text1: 'Delivery needs the customer\'s phone and address' }); return; }
+    if (moneyError) { Toast.show({ type: 'error', text1: moneyError }); return; }
+    submit();
+  };
+  useChordKeys({ a: () => cashRef.current?.focus(), s: placeKey }, screenFocused);
+  useEffect(() => {
+    if (pendingKeys.cash) { pendingKeys.cash = false; setTimeout(() => cashRef.current?.focus(), 300); }
+    if (pendingKeys.place) { pendingKeys.place = false; setTimeout(placeKey, 300); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async () => {
     setSaving(true);
@@ -144,7 +166,10 @@ export default function PosOrderScreen({ navigation, route }) {
           {!lines.length && <Text style={[s.itemMeta, { paddingVertical: 10 }]}>No items. Add them in the shop.</Text>}
           {lines.map((l, i) => (
             <View key={l.key} style={{ flexDirection: 'row', gap: 8, paddingVertical: 8, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border }}>
-              <Text style={{ flex: 1, color: colors.text }}><Text style={{ fontWeight: '800' }}>{qtyLabel(l.qty, l.unit)}</Text>  {l.name}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text }}><Text style={{ fontWeight: '800' }}>{qtyLabel(l.qty, l.unit)}</Text>  {l.name}</Text>
+                <DiscountNote d={lineDiscount(l)} unit={l.size ? '' : l.unit} />
+              </View>
               <Text style={{ fontWeight: '700', color: colors.text }}>{money(round2(l.qty * l.price))}</Text>
             </View>
           ))}
@@ -171,7 +196,13 @@ export default function PosOrderScreen({ navigation, route }) {
         </Card>
       )}
 
-      <CheckoutFields form={form} />
+      {!!editing && (
+        <LinesScope value={edit}>
+          <CustomItemButton title="Add a custom item" style={{ alignSelf: 'flex-start', marginBottom: 12 }} />
+        </LinesScope>
+      )}
+
+      <CheckoutFields form={form} cashRef={cashRef} />
 
       {!!editing && !tablet && <ProductPicker visible={picker} onClose={() => setPicker(false)} onAdd={add} lines={lines} />}
       {!!editing && tablet && (

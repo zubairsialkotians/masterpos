@@ -1,4 +1,5 @@
 import { API_BASE, getShopKey } from '../config';
+import { isOfflineMode } from './offlineMode';
 import { setCatalogueFetcher, savedCatalogue, refreshCatalogue, localCategories, localProducts, localProduct } from './catalogCache';
 
 export class AuthError extends Error {}
@@ -23,7 +24,17 @@ function query(params = {}) {
 // some hosts strip the Authorization header). The shop key goes as a param, not a header,
 // so browsers don't need a CORS preflight for it.
 // timeout (ms): give up waiting and treat it as no internet (a weak connection that never answers)
+// Offline mode (slow internet): new staff orders and returns don't wait for the server, they are kept on the device.
+// Sending them later (offline: 1, from offlineOrders.js) still goes through.
+const KEPT_ON_DEVICE = new Set(['/pos/orders/place', '/pos/returns/place']);
+
 async function request(method, path, data = {}, { timeout = 0 } = {}) {
+  if (isOfflineMode() && KEPT_ON_DEVICE.has(path) && !data.offline) {
+    const err = new Error('Offline mode is on');
+    err.offline = true;
+    err.forced = true;
+    throw err;
+  }
   const headers = { Accept: 'application/json' };
   if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
   const payload = { ...data, shop_key: getShopKey(), ...(sessionToken ? { token: sessionToken } : {}) };
@@ -163,6 +174,7 @@ export const api = {
   // Orders taken in the app (owner / branch admin / cashier)
   // offline_ref makes sending it again safe (the server returns the first order); 20 s, then it counts as no internet
   posPlace: (d) => request('POST', '/pos/orders/place', d, { timeout: 20000 }),
+  posReturn: (d) => request('POST', '/pos/returns/place', d, { timeout: 20000 }),
   posUpdate: (d) => post('/pos/orders/update', d),
   // Voice ordering: what was said + the cart and customer so far → { actions, products, customer, place_order, clear_cart, not_found, reply }
   posVoice: (text, cart, customer) => post('/pos/voice', { text, cart, customer }),

@@ -3,7 +3,7 @@ import { api, AuthError } from './api';
 import { getShopKey } from '../config';
 
 /*
-  Orders taken with no internet (MasterPOS staff checkout).
+  Orders (and walk-in returns, kind: 'return') taken with no internet (MasterPOS staff checkout / Return mode).
   The order is kept on this device, its bill printed from what the device knows, and it is sent to the
   server as soon as the internet is back (OfflineSync in App.js tries every 30 s and when the app opens).
   Each order has offline_ref, made on the device before the first try: the server makes one order per ref,
@@ -66,7 +66,15 @@ export async function queueOrder({ payload, order }) {
   await save(key, [...list, { ref: payload.offline_ref, at: order.created_at, payload, order, error: '', tries: 0 }]);
 }
 
-// Send the waiting orders, oldest first. Stops at the first "no internet"; a refused order is held with its reason.
+// Keep a walk-in return that could not reach the server. payload: what /pos/returns/place takes (with return_ref); slip: what was printed
+export async function queueReturn({ payload, slip }) {
+  const key = getShopKey();
+  const list = await load();
+  if (list.some((o) => o.ref === payload.return_ref)) return;
+  await save(key, [...list, { kind: 'return', ref: payload.return_ref, at: slip.created_at, payload, order: slip, error: '', tries: 0 }]);
+}
+
+// Send the waiting orders (and returns), oldest first. Stops at the first "no internet"; a refused order is held with its reason.
 export function sendQueued() {
   if (sending) return sending;
   const key = getShopKey();
@@ -78,7 +86,8 @@ export function sendQueued() {
       for (const entry of list.filter((o) => !o.error)) {
         if (getShopKey() !== key) break; // logged in to another shop meanwhile
         try {
-          await api.posPlace({ ...entry.payload, offline_ref: entry.ref, offline: 1, offline_at: entry.at });
+          if (entry.kind === 'return') await api.posReturn({ ...entry.payload, return_ref: entry.ref, offline: 1, offline_at: entry.at });
+          else await api.posPlace({ ...entry.payload, offline_ref: entry.ref, offline: 1, offline_at: entry.at });
           await save(key, memo.list.filter((o) => o.ref !== entry.ref));
           sent += 1;
         } catch (e) {

@@ -31,6 +31,7 @@ import AdminHomeScreen from './screens/AdminHomeScreen';
 import AdminOrdersScreen from './screens/AdminOrdersScreen';
 import AdminOrderDetailScreen from './screens/AdminOrderDetailScreen';
 import ReturnFormScreen from './screens/ReturnFormScreen';
+import PosReturnScreen from './screens/PosReturnScreen';
 import ReturnsScreen from './screens/ReturnsScreen';
 import ReviewsScreen from './screens/ReviewsScreen';
 import ItemsScreen from './screens/ItemsScreen';
@@ -118,7 +119,7 @@ const ROUTES = {
     Purchases: PurchasesScreen, PurchaseForm: PurchaseFormScreen,
   },
   // Taking orders in the app: owner, branch admin, cashier (the cashier's home is their orders list)
-  seller: { AdminOrders: AdminOrdersScreen, AdminOrderDetail: AdminOrderDetailScreen, PosOrder: PosOrderScreen, Plan: PlanScreen },
+  seller: { AdminOrders: AdminOrdersScreen, AdminOrderDetail: AdminOrderDetailScreen, PosOrder: PosOrderScreen, PosReturn: PosReturnScreen, Plan: PlanScreen },
   // Kitchen / rider panel (the shop admin can open the kitchen board too)
   team: { TeamHome: TeamHomeScreen, TeamOrderDetail: TeamOrderDetailScreen },
   owner: { Team: TeamScreen, TeamForm: TeamFormScreen, Branches: BranchesScreen, BranchForm: BranchFormScreen, Settings: SettingsScreen, AdminNews: AdminNewsScreen, NewsForm: NewsFormScreen, AdminBanners: AdminBannersScreen, BannerForm: BannerFormScreen },

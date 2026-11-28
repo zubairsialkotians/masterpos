@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useChordKeys, pendingKeys } from './keys';
 import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,7 +7,8 @@ import { useNavigation } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { Card, KV, Field, Button, SectionTitle, Segmented, BranchField, s } from './ui';
 import { useAuth } from './AuthContext';
-import { useCart, lineName } from './CartContext';
+import { useCart, lineName, linePayload, lineDiscount } from './CartContext';
+import { DiscountNote } from './shop';
 import { usePrintBill } from './PrintBill';
 import { api } from '../services/api';
 import { newOrderRef, localTime, queueOrder, sendQueued } from '../services/offlineOrders';
@@ -31,7 +33,7 @@ export function usePosForm({ lines, editing = null }) {
   // One ref per order being taken: trying again after a lost answer never makes a second order
   const [ref] = useState(newOrderRef);
   const [f, setF] = useState({
-    fulfilment: editing?.fulfilment || 'pickup', name: '', phone: '', address: '', note: '', branch_id: 0,
+    fulfilment: editing?.fulfilment || 'pickup', name: '', phone: '', address: '', note: '', branch_id: 0, cash: '',
     // New order: customer details already given by voice
     ...(!editing ? draftFields(cart.draft) : {}),
     // Editing: the order's own values. New order: tax / service charge start from the shop's defaults (Shop settings)
@@ -55,34 +57,65 @@ export function usePosForm({ lines, editing = null }) {
   }, [cart.draft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const subtotal = round2(lines.reduce((a, l) => a + round2(l.qty * l.price), 0));
+  // What the items' own discounts (Items → Discount) take off; already in the items' prices
+  const itemsDiscount = round2(lines.reduce((a, l) => a + (lineDiscount(l)?.off || 0), 0));
   const fee = editing ? Number(editing.delivery_fee) || 0 : deliveryFee(shop, subtotal, f.fulfilment);
   const base = round2(subtotal + fee);
-  const adj = (k, on) => {
-    const type = f[`${k}_type`];
-    const value = Number(f[`${k}_value`]) || 0;
-    const amount = !type || value <= 0 ? 0 : round2(type === 'percent' ? on * Math.min(value, 100) / 100 : (k === 'discount' ? Math.min(value, on) : value));
-    const error = type === 'percent' && value > 100 ? 'At most 100%' : k === 'discount' && type === 'fixed' && value > on ? `At most ${money(on)}` : null;
-    return { type, value, amount, error, pct: type === 'percent' && amount > 0 ? ` (${value}%)` : '' };
+  // The money for a set of fields (the form, or the form with the cash-short discount)
+  const calc = (fx) => {
+    const adj = (k, on) => {
+      const type = fx[`${k}_type`];
+      const value = Number(fx[`${k}_value`]) || 0;
+      const amount = !type || value <= 0 ? 0 : round2(type === 'percent' ? on * Math.min(value, 100) / 100 : (k === 'discount' ? Math.min(value, on) : value));
+      const error = type === 'percent' && value > 100 ? 'At most 100%' : k === 'discount' && type === 'fixed' && value > on ? `At most ${money(on)}` : null;
+      return { type, value, amount, error, pct: type === 'percent' && amount > 0 ? ` (${value}%)` : '' };
+    };
+    const d = adj('discount', base);
+    const after = round2(base - d.amount);
+    const t = adj('tax', after);
+    const sv = adj('service', after);
+    return { disc: d, tax: t, service: sv, total: round2(after + t.amount + sv.amount) };
   };
-  const disc = adj('discount', base);
-  const after = round2(base - disc.amount);
-  const tax = adj('tax', after);
-  const service = adj('service', after);
-  const total = round2(after + tax.amount + service.amount);
-  const moneyError = disc.error || tax.error || service.error;
+
+  /*
+    Cash the customer gives (optional; nothing typed = exactly the total).
+    Less than the total: the difference becomes a fixed discount, so the total is what was received
+    (e.g. total 170, cash 150 → discount 20). With a % tax / service charge the discount is worked out so the
+    final total still comes to the cash given.
+  */
+  const cashTyped = !editing && String(f.cash).trim() !== '';
+  const cashIn = round2(Number(f.cash) || 0);
+  const plain = calc(f);
+  let eff = f;
+  let short = 0;
+  if (cashTyped && cashIn > 0 && cashIn + 1e-9 < plain.total) {
+    const withD = (D) => calc({ ...f, discount_type: 'fixed', discount_value: String(D) }).total;
+    let lo = 0, hi = base;
+    for (let i = 0; i < 50; i += 1) { const mid = (lo + hi) / 2; if (withD(mid) > cashIn) lo = mid; else hi = mid; }
+    let D = round2(hi);
+    if (withD(D) > cashIn + 1e-9 && D + 0.01 <= base) D = round2(D + 0.01);
+    eff = { ...f, discount_type: 'fixed', discount_value: String(D) };
+    short = round2(plain.total - cashIn);
+  }
+  const { disc, tax, service, total } = calc(eff);
+  const received = cashTyped && cashIn > 0 ? cashIn : total;
+  const change = round2(Math.max(0, received - total));
+  const cashError = cashTyped && cashIn <= 0 ? 'Enter the cash received, or leave it empty'
+    : cashTyped && cashIn + 0.005 < total ? `Can't come down to ${money(cashIn)} (lowest ${money(total)})` : null;
+  const moneyError = disc.error || tax.error || service.error || cashError;
   const needsContact = !editing && f.fulfilment === 'delivery' && (!f.phone.trim() || !f.address.trim());
 
   // What the server takes: items + the charges that come to something.
   // price / delivery_fee only count for an order sent later from this device (offline), so its bill and the server agree
   const payload = () => ({
-    items: lines.map((l) => ({ item_id: l.item_id, size: l.size || '', qty: l.qty, price: l.price })),
+    items: lines.map(linePayload),
     ...Object.fromEntries([['discount', disc], ['tax', tax], ['service', service]].flatMap(([k, a]) => [
       [`${k}_type`, a.amount > 0 ? a.type : ''], [`${k}_value`, a.amount > 0 ? a.value : 0],
     ])),
   });
   const placePayload = () => ({
     ...payload(), fulfilment: f.fulfilment, name: f.name, phone: f.phone, address: f.address, note: f.note, branch_id: f.branch_id,
-    delivery_fee: fee, offline_ref: ref,
+    delivery_fee: fee, offline_ref: ref, cash_received: received,
   });
 
   // The bill of an order kept on this device (no internet): same fields as the server's order
@@ -93,12 +126,14 @@ export function usePosForm({ lines, editing = null }) {
       id: 0, order_no: `OFFLINE-${ref.slice(-6)}`, offline_ref: ref, offline: true, created_at: localTime(), status: 'confirmed',
       fulfilment: f.fulfilment, name: f.name.trim() || 'Walk-in customer', phone: f.phone, address: f.fulfilment === 'delivery' ? f.address : '', note: f.note,
       payment_method: 'cod', payment_status: '', branch_name: branch?.name || '',
-      items: lines.map((l) => ({ name: l.name, size: l.size || '', unit: l.unit, qty: l.qty, price: l.price, line_total: round2(l.qty * l.price) })),
+      items: lines.map((l) => ({ name: l.name, size: l.size || '', unit: l.unit, qty: l.qty, price: l.price, line_total: round2(l.qty * l.price),
+        list_price: Math.max(Number(l.was) || 0, Number(l.price) || 0), item_discount: lineDiscount(l)?.off || 0 })),
       subtotal, delivery_fee: fee, ...charge('discount', disc), ...charge('tax', tax), ...charge('service', service), total, refunded: 0,
+      cash_received: received, change,
     };
   };
 
-  return { f, set, editing, subtotal, fee, disc, tax, service, total, moneyError, needsContact, payload, placePayload, localOrder };
+  return { f, eff, set, editing, subtotal, itemsDiscount, fee, disc, tax, service, total, received, change, short, cashError, moneyError, needsContact, payload, placePayload, localOrder };
 }
 
 /*
@@ -115,7 +150,7 @@ export async function placeStaffOrder(form) {
     if (!e.offline) throw e;
     const order = form.localOrder();
     await queueOrder({ payload, order });
-    return { order, offline: true, message: 'No internet: order saved on this device' };
+    return { order, offline: true, message: e.forced ? 'Offline mode: order saved on this device' : 'No internet: order saved on this device' };
   }
 }
 
@@ -127,9 +162,10 @@ export function orderErrorToast(e, navigation, editing) {
 }
 
 // Customer (new orders), tax, service charge, discount and the totals
-export function CheckoutFields({ form }) {
+// cashRef: the Cash received box (Ctrl+A A focuses it)
+export function CheckoutFields({ form, cashRef }) {
   const { shop, isOwner } = useAuth();
-  const { f, set, editing, subtotal, fee, disc, tax, service, total } = form;
+  const { f, eff, set, editing, subtotal, itemsDiscount, fee, disc, tax, service, total, change, short, cashError } = form;
   return (
     <>
       {!editing && (
@@ -149,16 +185,31 @@ export function CheckoutFields({ form }) {
       <AdjustField title="Tax" k="tax" f={f} set={set} a={tax} hint="Added on the total after the discount" />
       <AdjustField title="Service charge" k="service" f={f} set={set} a={service} hint="Added on the total after the discount" />
       {/* Last, just above the total: the discount still comes off items + delivery before tax / service charge */}
-      <AdjustField title="Discount" k="discount" f={f} set={set} a={disc} hint="Taken off the order total (items + delivery)" />
+      <AdjustField title="Discount" k="discount" f={eff} set={set} a={disc}
+        hint={short > 0 ? `Set from the cash received (${money(short)} short). Clear the cash to change it.` : 'Taken off the order total (items + delivery)'} />
 
       <Card>
         <KV label="Items" value={money(subtotal)} />
+        {itemsDiscount > 0 && <KV label="Item discounts (included)" value={`-${money(itemsDiscount)}`} tone="good" />}
         {(f.fulfilment === 'delivery' || fee > 0) && <KV label="Delivery" value={fee ? money(fee) : 'Free'} />}
         {disc.amount > 0 && <KV label={`Discount${disc.pct}`} value={`-${money(disc.amount)}`} tone="bad" />}
         {tax.amount > 0 && <KV label={`Tax${tax.pct}`} value={`+${money(tax.amount)}`} />}
         {service.amount > 0 && <KV label={`Service charge${service.pct}`} value={`+${money(service.amount)}`} />}
         <KV label="Total" value={money(total)} bold />
       </Card>
+      {/* Last: the cash the customer gives and the change to give back (optional; empty = the exact total) */}
+      {!editing && (
+        <Card>
+          <Field ref={cashRef} label="Cash received (optional)" value={f.cash} onChangeText={(v) => set('cash')(v.replace(/[^0-9.]/g, ''))}
+            placeholder={`${money(total)} (exact amount)`} keyboardType="decimal-pad" error={cashError} style={{ marginBottom: 8 }} testID="cash-received" />
+          {short > 0 && !cashError && (
+            <Text style={[s.itemMeta, { color: colors.warning, fontWeight: '700', marginBottom: 6 }]}>
+              {money(short)} short: added to the discount, so the total is {money(total)}.
+            </Text>
+          )}
+          <KV label="Change to return" value={money(change)} bold tone={change > 0 ? 'good' : undefined} />
+        </Card>
+      )}
     </>
   );
 }
@@ -192,6 +243,7 @@ export function PanelCheckout({ width, onBack, bottomInset = true }) {
   const { print } = usePrintBill();
   const form = usePosForm({ lines: cart.lines.map((l) => ({ ...l, name: lineName(l) })) });
   const [saving, setSaving] = useState(false);
+  const cashRef = useRef(null);
 
   const submit = async () => {
     setSaving(true);
@@ -215,6 +267,20 @@ export function PanelCheckout({ width, onBack, bottomInset = true }) {
     }
   };
 
+  // Keyboard: Ctrl+A A cash received, Ctrl+S S place the order (also when asked for on the shop screen just before)
+  const place = () => {
+    if (saving) return;
+    if (form.needsContact) { Toast.show({ type: 'error', text1: 'Delivery needs the customer\'s phone and address' }); return; }
+    if (form.moneyError) { Toast.show({ type: 'error', text1: form.moneyError }); return; }
+    if (cart.count) submit();
+  };
+  const focusCash = () => { cashRef.current?.focus(); };
+  useChordKeys({ a: focusCash, s: place });
+  useEffect(() => {
+    if (pendingKeys.cash) { pendingKeys.cash = false; setTimeout(focusCash, 50); }
+    if (pendingKeys.place) { pendingKeys.place = false; setTimeout(place, 50); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <KeyboardAvoidingView behavior="padding" style={[st.panel, { width, paddingBottom: 12 + (bottomInset ? insets.bottom : 0) }]} testID="panel-checkout-form">
       <View style={st.head}>
@@ -231,12 +297,15 @@ export function PanelCheckout({ width, onBack, bottomInset = true }) {
         <Card style={{ paddingVertical: 4 }}>
           {cart.lines.map((l, i) => (
             <View key={`${l.item_id}|${l.size || ''}`} style={{ flexDirection: 'row', gap: 8, paddingVertical: 7, borderTopWidth: i ? 1 : 0, borderTopColor: colors.border }}>
-              <Text style={{ flex: 1, color: colors.text }}><Text style={{ fontWeight: '800' }}>{qtyLabel(l.qty, l.unit)}</Text>  {lineName(l)}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text }}><Text style={{ fontWeight: '800' }}>{qtyLabel(l.qty, l.unit)}</Text>  {lineName(l)}</Text>
+                <DiscountNote d={lineDiscount(l)} unit={l.size ? '' : l.unit} />
+              </View>
               <Text style={{ fontWeight: '700', color: colors.text }}>{money(round2(l.qty * l.price))}</Text>
             </View>
           ))}
         </Card>
-        <CheckoutFields form={form} />
+        <CheckoutFields form={form} cashRef={cashRef} />
       </ScrollView>
 
       <View style={st.foot}>
